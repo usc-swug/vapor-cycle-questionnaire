@@ -37,10 +37,12 @@ def generate_cycle(cycle_type, num_reheats=None, num_fwh=None, case_num=None):
         problem = cycle.get_problem_statement()
         solution = cycle.get_solution()
         
-        return problem, solution
+        pdf_path = save_results(problem, solution)
+        
+        return problem, solution, gr.update(value=pdf_path)
     
     except Exception as e:
-        return f"Error: {str(e)}", ""
+        return f"Error: {str(e)}", "", gr.update(value=None)
 
 
 def update_parameters(cycle_type):
@@ -146,7 +148,7 @@ with gr.Blocks(title="Rankine Cycle Problem Generator") as demo:
                     "Regenerative Rankine Cycle",
                     "Regenerative-Reheat Rankine Cycle"
                 ],
-                value="Simple Rankine Cycle",
+                value="Regenerative Rankine Cycle",
                 label="Cycle Type",
                 interactive=True
             )
@@ -202,14 +204,7 @@ with gr.Blocks(title="Rankine Cycle Problem Generator") as demo:
     generate_btn.click(
         fn=generate_cycle,
         inputs=[cycle_type, num_reheats, num_fwh, case_num],
-        outputs=[problem_output, solution_output]
-    )
-    
-    # Download handler
-    download_btn.click(
-        fn=save_results,
-        inputs=[problem_output, solution_output],
-        outputs=download_btn
+        outputs=[problem_output, solution_output, download_btn]
     )
     
     gr.Markdown("---")
