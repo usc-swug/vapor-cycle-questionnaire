@@ -293,8 +293,8 @@ class RegenerativeRankineCycle(RankineCycle):
         )
     
     def _calculate_two_fwh(self):
-        p_ext1 = random.randint(2000, 4000)
-        p_ext2 = random.randint(200, 1000)
+        p_ext1 = random.randrange(2000, 4001, 50)
+        p_ext2 = random.randrange(200, 1001, 10)
         
         self.problem_statement = (
             f"--- PROBLEM (Ideal Regenerative Rankine Cycle with 2 OFWHs) ---\n"
@@ -416,11 +416,13 @@ class RegenerativeReheatRankineCycle(RankineCycle):
         
         y = (h8 - h7) / (h2 - h7)
         
-        w_turb = (h1 - h2) + (1 - y) * (h3 - h5)
+        w_turb = (h1 - h2) + (1 - y) * (h2 - h3) + (1 - y) * (h4 - h5)
         w_pump_total = (1 - y) * w_pump1 + w_pump2
         w_net = w_turb - w_pump_total
+        q_out = (h5 - h6) * (1 - y)
         q_in = (h1 - h9) + (1 - y) * (h4 - h3)
-        eta = (w_net / q_in) * 100
+        eta_q = (1 - (q_out / q_in)) * 100
+        eta_w = (w_net / q_in) * 100
         
         self.solution = (
             f"\n--- SOLUTION ---\n"
@@ -437,7 +439,7 @@ class RegenerativeReheatRankineCycle(RankineCycle):
             f"Total Turbine Work: {w_turb:.2f} kJ/kg\n"
             f"Total Pump Work: {w_pump_total:.2f} kJ/kg\n"
             f"Total Heat Added: {q_in:.2f} kJ/kg\n"
-            f"Thermal Efficiency: {eta:.2f}%"
+            f"Thermal Efficiency: {eta_q:.2f}%"
         )
     
     def _calculate_case_2(self):
@@ -493,11 +495,13 @@ class RegenerativeReheatRankineCycle(RankineCycle):
         z = ((1 - y) * (h12 - h11)) / (h5 - h11)
         w = ((1 - y - z) * (h10 - h9)) / (h6 - h9)
         
-        w_turb = (h1 - h2) + (1 - y) * (h3 - h5) + (1 - y - z) * (h5 - h6) + (1 - y - z - w) * (h6 - h7)
+        w_turb = (h1 - h2) + (1 - y) * (h2 - h3) + (1 - y) * (h4 - h5) + (1 - y - z) * (h5 - h6) + (1 - y - z - w) * (h6 - h7)
         w_pump_total = (1 - y - z - w) * w_pump1 + (1 - y - z) * w_pump2 + (1 - y) * w_pump3 + w_pump4
         w_net = w_turb - w_pump_total
+        q_out = (h7 - h8) * (1 - y - z - w)
         q_in = (h1 - h15) + (1 - y) * (h4 - h3)
-        eta = (w_net / q_in) * 100
+        eta_q = (1 - (q_out / q_in)) * 100
+        eta_w = (w_net / q_in) * 100
         
         self.solution = (
             f"\n--- SOLUTION ---\n"
@@ -520,20 +524,21 @@ class RegenerativeReheatRankineCycle(RankineCycle):
             f"Total Turbine Work: {w_turb:.2f} kJ/kg\n"
             f"Total Pump Work: {w_pump_total:.2f} kJ/kg\n"
             f"Total Heat Added: {q_in:.2f} kJ/kg\n"
-            f"Thermal Efficiency: {eta:.2f}%"
+            f"Thermal Efficiency: {eta_q:.2f}%"
         )
     
     def _calculate_case_3(self):
         p_first_expand = random.randrange(2000, 4000, 50)
         p_ext1 = random.randrange(1000, 2000, 50)
-        p_ext2 = random.randrange(200, 800, 10)
+        p_ext2 = random.randrange(500, 1000, 50)
+        p_ext3 = random.randrange(100, 400, 10)  # TODO: Modify Range
         
         self.problem_statement = (
             f"--- PROBLEM (Regenerative-Reheat Rankine Cycle - Case 3) ---\n"
             f"An ideal regenerative-reheat Rankine cycle uses water. Steam enters at "
             f"{self.p_high} kPa and {self.t_high} °C, expands in the turbine to {p_first_expand} kPa, "
             f"and is reheated to {self.t_reheat} °C. After reheating, the steam expands with "
-            f"extraction points at {p_ext1} kPa and {p_ext2} kPa for feedwater heating, "
+            f"extraction points at {p_ext1} kPa, {p_ext2} kPa, and {p_ext3} kPa for feedwater heating, "
             f"finally condensing at {self.p_low} kPa. "
             f"Calculate extraction fractions and thermal efficiency."
         )
@@ -548,36 +553,40 @@ class RegenerativeReheatRankineCycle(RankineCycle):
         
         h4 = steam.h(p=p_ext1, s=s3)[0]
         h5 = steam.h(p=p_ext2, s=s3)[0]
-        h6 = steam.h(p=self.p_low, s=s3)[0]
+        h6 = steam.h(p=p_ext3, s=s3)[0]
+        h7 = steam.h(p=self.p_low, s=s3)[0]
         
-        h7 = steam.h(p=self.p_low, x=0)[0]
-        v7 = steam.v(p=self.p_low, x=0)[0]
-        w_pump1 = v7 * (p_ext2 - self.p_low)
-        h8 = h7 + w_pump1
+        h8 = steam.h(p=self.p_low, x=0)[0]
+        v8 = steam.v(p=self.p_low, x=0)[0]
+        w_pump1 = v8 * (p_ext3 - self.p_low)
+        h9 = h8 + w_pump1
         
-        h9 = steam.h(p=p_ext2, x=0)[0]
-        v9 = steam.v(p=p_ext2, x=0)[0]
-        w_pump2 = v9 * (p_ext1 - p_ext2)
-        h10 = h9 + w_pump2
+        h10 = steam.h(p=p_ext3, x=0)[0]
+        v10 = steam.v(p=p_ext3, x=0)[0]
+        w_pump2 = v10 * (p_ext2 - p_ext3)
+        h11 = h10 + w_pump2
         
-        h11 = steam.h(p=p_ext1, x=0)[0]
-        v11 = steam.v(p=p_ext1, x=0)[0]
-        w_pump3 = v11 * (p_first_expand - p_ext1)
-        h12 = h11 + w_pump3
+        h12 = steam.h(p=p_ext2, x=0)[0]
+        v12 = steam.v(p=p_ext2, x=0)[0]
+        w_pump3 = v12 * (p_ext1 - p_ext2)
+        h13 = h12 + w_pump3
         
-        h13 = steam.h(p=p_first_expand, x=0)[0]
-        v13 = steam.v(p=p_first_expand, x=0)[0]
-        w_pump4 = v13 * (self.p_high - p_first_expand)
-        h14 = h13 + w_pump4
+        h14 = steam.h(p=p_ext1, x=0)[0]
+        v14 = steam.v(p=p_ext1, x=0)[0]
+        w_pump4 = v14 * (p_first_expand - p_ext1)
+        h15 = h14 + w_pump4
         
-        y = (h11 - h10) / (h4 - h10)
-        z = ((1 - y) * (h9 - h8)) / (h5 - h8)
+        y = (h14 - h13) / (h4 - h13)
+        z = ((1 - y) * (h12 - h11)) / (h5 - h11)
+        w = ((1 - y - z) * (h10 - h9)) / (h6 - h9)
         
-        w_turb = (h1 - h2) + (h3 - h4) + (1 - y) * (h4 - h5) + (1 - y - z) * (h5 - h6)
-        w_pump_total = (1 - y - z) * w_pump1 + (1 - y) * w_pump2 + w_pump3 + w_pump4
+        w_turb = (h1 - h2) + (h3 - h4) + (1 - y) * (h4 - h5) + (1 - y - z) * (h5 - h6) + (1 - y - z - w) * (h6 - h7)
+        w_pump_total = (1 - y - z - w) * w_pump1 + (1 - y - z) * w_pump2 + (1 - y) * w_pump3 + w_pump4
         w_net = w_turb - w_pump_total
-        q_in = (h1 - h14) + (h3 - h2)
-        eta = (w_net / q_in) * 100
+        q_out = (h7 - h8) * (1 - y - z - w)
+        q_in = (h1 - h15) + (h3 - h2)
+        eta_q = (1 - (q_out / q_in)) * 100
+        eta_w = (w_net / q_in) * 100
         
         self.solution = (
             f"\n--- SOLUTION ---\n"
@@ -586,20 +595,21 @@ class RegenerativeReheatRankineCycle(RankineCycle):
             f"State 3 (After Reheat):  h3 = {h3:.2f} kJ/kg, s3 = {s3:.4f} kJ/kg-K\n"
             f"State 4 (Ext 1):         h4 = {h4:.2f} kJ/kg\n"
             f"State 5 (Ext 2):         h5 = {h5:.2f} kJ/kg\n"
-            f"State 6 (Turb Out):      h6 = {h6:.2f} kJ/kg\n"
-            f"State 7 (Pump 1 In):     h7 = {h7:.2f} kJ/kg\n"
-            f"State 8 (Pump 1 Out):    h8 = {h8:.2f} kJ/kg\n"
-            f"State 9 (Pump 2 In):     h9 = {h9:.2f} kJ/kg\n"
-            f"State 10 (Pump 2 Out):   h10 = {h10:.2f} kJ/kg\n"
-            f"State 11 (Pump 3 In):    h11 = {h11:.2f} kJ/kg\n"
-            f"State 12 (Pump 3 Out):   h12 = {h12:.2f} kJ/kg\n"
-            f"State 13 (Pump 4 In):    h13 = {h13:.2f} kJ/kg\n"
-            f"State 14 (Pump 4 Out):   h14 = {h14:.2f} kJ/kg\n\n"
-            f"Extraction Fractions: y = {y:.4f}, z = {z:.4f}\n"
+            f"State 6 (Ext 3):         h6 = {h6:.2f} kJ/kg\n"
+            f"State 7 (Turb Out):      h7 = {h7:.2f} kJ/kg\n"
+            f"State 8 (Pump 1 In):     h8 = {h8:.2f} kJ/kg\n"
+            f"State 9 (Pump 1 Out):    h9 = {h9:.2f} kJ/kg\n"
+            f"State 10 (Pump 2 In):    h10 = {h10:.2f} kJ/kg\n"
+            f"State 11 (Pump 2 Out):   h11 = {h11:.2f} kJ/kg\n"
+            f"State 12 (Pump 3 In):    h12 = {h12:.2f} kJ/kg\n"
+            f"State 13 (Pump 3 Out):   h13 = {h13:.2f} kJ/kg\n"
+            f"State 14 (Pump 4 In):    h14 = {h14:.2f} kJ/kg\n"
+            f"State 15 (Pump 4 Out):   h15 = {h15:.2f} kJ/kg\n"
+            f"Extraction Fractions: y = {y:.4f}, z = {z:.4f}, w = {w:.4f}\n"
             f"Total Turbine Work: {w_turb:.2f} kJ/kg\n"
             f"Total Pump Work: {w_pump_total:.2f} kJ/kg\n"
             f"Total Heat Added: {q_in:.2f} kJ/kg\n"
-            f"Thermal Efficiency: {eta:.2f}%"
+            f"Thermal Efficiency: {eta_q:.2f}%"
         )
     
     def _calculate_case_4(self):
@@ -645,11 +655,13 @@ class RegenerativeReheatRankineCycle(RankineCycle):
         y = (h10 - h9) / (h2 - h9)
         z = ((1 - y) * (h8 - h7)) / (h4 - h7)
         
-        w_turb = (h1 - h2) + (h3 - h4) + (1 - y - z) * (h4 - h5)
+        w_turb = (h1 - h2) + (1 - y) * (h3 - h4) + (1 - y - z) * (h4 - h5)
         w_pump_total = (1 - y - z) * w_pump1 + (1 - y) * w_pump2 + w_pump3
         w_net = w_turb - w_pump_total
-        q_in = (h1 - h11) + (h3 - h2)
-        eta = (w_net / q_in) * 100
+        q_out = (h5 - h6) * (1 - y - z)
+        q_in = (h1 - h11) + (1 - y) * (h3 - h2)
+        eta_q = (1 - (q_out / q_in)) * 100
+        eta_w = (w_net / q_in) * 100
         
         self.solution = (
             f"\n--- SOLUTION ---\n"
@@ -668,7 +680,7 @@ class RegenerativeReheatRankineCycle(RankineCycle):
             f"Total Turbine Work: {w_turb:.2f} kJ/kg\n"
             f"Total Pump Work: {w_pump_total:.2f} kJ/kg\n"
             f"Total Heat Added: {q_in:.2f} kJ/kg\n"
-            f"Thermal Efficiency: {eta:.2f}%"
+            f"Thermal Efficiency: {eta_q:.2f}%\n"
         )
 
 
