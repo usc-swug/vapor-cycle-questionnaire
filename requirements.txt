@@ -1,2 +1,3 @@
 pyromat==2.2.6
 reportlab==4.5.0
+gradio
